@@ -292,51 +292,71 @@ class Es extends Words
     {
         $currency = strtoupper($currency);
 
+        $this->checkCurrencySupport($currency);
+
+        //change digit "one" to the short version see: https://www.rae.es/dpd/una
+        self::$units[1] = 'un';
+
+        $currencyNames = static::$currencyNames[$currency];
+
+        $words = [];
+
+        array_push($words, $this->wordSeparator . trim($this->toWords($decimal)));
+        array_push($words, $this->wordSeparator . $this->correspondingCurrency($currencyNames, $this->level($decimal)));
+        array_push($words, $this->correspondingfraction($currencyNames, $fraction));
+
+        //Go back digit "one"
+        self::$units[1] = 'uno';
+
+        return implode('', $words);
+    }
+
+    private function checkCurrencySupport($currency)
+    {
         if (!array_key_exists($currency, static::$currencyNames)) {
             throw new NumberToWordsException(
                 sprintf('Currency "%s" is not available for "%s" language', $currency, get_class($this))
             );
         }
+    }
 
-        //change digit "one" to the short version
-        self::$units[1] = 'un';
-
-        $currencyNames = static::$currencyNames[$currency];
-
-        $level = ($decimal == 1) ? 0 : 1;
-
-        if ($level > 0) {
-            $currencyNames = self::$currencyNames[$currency];
-            if (count($currencyNames[0]) > 1) {
-                $words = $currencyNames[0][$level];
-            } else {
-                $words = $currencyNames[0][0] . 's';
-            }
-        } else {
-            $words = $currencyNames[0][0];
+    private function correspondingCurrency($currencyNames, $level)
+    {   
+        if (! $level) {
+            return $currencyNames[0][0];
         }
 
-        $words = $this->wordSeparator . trim($this->toWords($decimal) . ' ' . $words);
+        return count($currencyNames[0]) > 1 
+            ? $currencyNames[0][$level]
+            : $currencyNames[0][0] . 's';
+    }
 
-        if (null !== $fraction) {
-            $words .= $this->wordSeparator . 'con' . $this->wordSeparator . trim($this->toWords($fraction));
-
-            $level = ($fraction == 1) ? 0 : 1;
-
-            if ($level > 0) {
-                if (count($currencyNames[1]) > 1) {
-                    $words .= $this->wordSeparator . $currencyNames[1][$level];
-                } else {
-                    $words .= $this->wordSeparator . $currencyNames[1][0] . 's';
-                }
-            } else {
-                $words .= $this->wordSeparator . $currencyNames[1][0];
-            }
+    private function correspondingfraction($currencyNames, $fraction)
+    {
+        if (is_null($fraction)) {
+            return;
         }
 
-        //Go back digit "one"
-        self::$units[1] = 'uno';
+        $words = [];
 
-        return $words;
+        array_push($words, $this->wordSeparator . 'con');
+        array_push($words, $this->wordSeparator . trim($this->toWords($fraction)));
+
+        if (! $this->level($fraction)) {
+            array_push($words, $this->wordSeparator . $currencyNames[1][0]);
+            return implode('', $words);
+        }
+
+        count($currencyNames[1]) > 1 
+            ? array_push($words, $this->wordSeparator . $currencyNames[1][$this->level($fraction)])
+            : array_push($words, $this->wordSeparator . $currencyNames[1][0] . 's');
+   
+        return implode('', $words);
+    }
+
+    private function level($value)
+    {
+        return $value == 1 ? 0 : 1;
     }
 }
+
