@@ -169,7 +169,7 @@ class Es extends Words
         return implode('', array_filter($words, fn ($word) => strlen(trim($word))));
     }
 
-    protected function needToUsedPower($power, $number)
+    private function needToUsedPower($power, $number)
     {
         if (! $this->numberIsAboveSixUnits($number)) {
             return [$number, null];
@@ -178,29 +178,29 @@ class Es extends Words
         return [substr($number, -6), $this->highestPower($power, $this->numberWithCorrespondingPower($number))];
     }
 
-    protected function numberIsAboveSixUnits($number)
+    private function numberIsAboveSixUnits($number)
     {
         return (strlen($number) > 6);
     }
 
-    protected function numberWithCorrespondingPower($number)
+    private function numberWithCorrespondingPower($number)
     {
         return preg_replace('/^0+/', '', substr($number, 0, -6));
     }
 
-    protected function highestPower($power, $snum)
+    private function highestPower($power, $snum)
     {
         return $this->checkHighestPower($power, $snum)
             ? $this->toWords($snum, $power + 6)
             : null;
     }
 
-    protected function checkHighestPower($power, $snum)
+    private function checkHighestPower($power, $snum)
     {
         return isset(self::$exponent[$power]) && $snum !== '';
     }
 
-    protected function getThousands($number)
+    private function getThousands($number)
     {
         $thousands = floor($number / 1000);
 
@@ -210,10 +210,10 @@ class Es extends Words
 
         if ($thousands > 1) {
             return $this->toWords($thousands, 3);
-        }   
+        }
     }
 
-    protected function getHundred($hundreds, $tens, $units)
+    private function getHundred($hundreds, $tens, $units)
     {   
         if ($hundreds == 1 && $units == 0 && $tens == 0) {
             return $this->wordSeparator . 'cien';
@@ -222,7 +222,7 @@ class Es extends Words
         return $this->wordSeparator . self::$hundreds[$hundreds];
     }
 
-    protected function getTens($tens, $units, $power)
+    private function getTens($tens, $units, $power)
     {
         if ($tens == 1) {
             return $this->getTeens($units);
@@ -237,18 +237,18 @@ class Es extends Words
         return $this->wordSeparator . self::$tens[$tens];
     }
 
-    protected function getTeens($units)
+    private function getTeens($units)
     {
         return $this->wordSeparator . self::$teens[$units];
     }
 
-    protected function getDigitsOnlyForMultipleOfTen($tens, $units, $power)
+    private function getDigitsOnlyForMultipleOfTen($tens, $units, $power)
     {
-        if (! ($tens != 1 && $tens != 2 && $units > 0)) {
+        if (! ($tens <> 1 && $tens <> 2 && $units > 0)) {
            return;
         }
 
-        if ($tens != 0) {
+        if ($tens <> 0) {
             return $this->wordSeparator . 'y ' . self::$units[$units];
         }
 
@@ -259,26 +259,25 @@ class Es extends Words
         return $this->wordSeparator . self::$units[$units];
     }
 
-    protected function getExponent($hundreds, $tens, $units, $power, $number)
+    private function getExponent($hundreds, $tens, $units, $power, $number)
     {
-        if (!$power > 0) {
+        if ($this->hasNotExponentKey($power) || !($number <> 0)) {
             return;
         }
 
-        if (isset(self::$exponent[$power])) {
-            $lev = self::$exponent[$power];
-        }
+        return $this->wordSeparator . $this->exponentName($hundreds, $tens, $units, self::$exponent[$power]);
+    }
 
-        if (!isset($lev) || !is_array($lev)) {
-            return null;
-        }
+    private function hasNotExponentKey($power)
+    {
+        return !($power > 0) 
+            && !array_key_exists($power, self::$exponent[$power]) 
+            && !is_array(self::$exponent[$power]);
+    }
 
-        // if it's only one use the singular suffix
-        $suffix = fn () => ($units == 1 && $tens == 0 && $hundreds == 0) ? $lev[0] : $lev[1];
-
-        if ($number != 0) {
-            return $this->wordSeparator . $suffix();
-        }
+    private function exponentName($hundreds, $tens, $units, $exponent)
+    {
+        return ($units == 1 && $tens == 0 && $hundreds == 0) ? $exponent[0] : $exponent[1];
     }
 
     /**
@@ -359,4 +358,3 @@ class Es extends Words
         return $value == 1 ? 0 : 1;
     }
 }
-
